@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vericode-ai"
+version = "0.1.0.dev0"
+description = "Catch what AI coding agents make up: fake packages, fake versions, fake functions. Feeds fix hints back to the agent."
+readme = "README.md"
+license = "LicenseRef-MIT-Commons-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Belim Safwan Khan" }]
+keywords = ["ai", "llm", "coding-agent", "hallucination", "pypi", "mcp", "static-analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "httpx>=0.28",
+    "packaging>=24.0",
+    "rapidfuzz>=3.9",
+    "typer>=0.12",
+    "platformdirs>=4.0",
+    "pyyaml>=6.0",
+    "mcp>=2.0,<3",
+]
+
+[project.optional-dependencies]
+symbols = ["pyright>=1.1.400"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "respx>=0.22",
+    "ruff>=0.8",
+]
+
+[project.scripts]
+vericode = "vericode.cli:app"
+vericode-mcp = "vericode.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/OWNER/vericode"
+Issues = "https://github.com/OWNER/vericode/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vericode"]
+
+[tool.hatch.build.targets.sdist]
+include = ["vericode", "tests", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: needs network and/or pyright; deselect with -m 'not slow'",
+]
+addopts = "-ra -m 'not slow'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
