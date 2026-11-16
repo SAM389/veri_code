@@ -46,8 +46,8 @@ vericode = "vericode.cli:app"
 vericode-mcp = "vericode.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/OWNER/vericode"
-Issues = "https://github.com/OWNER/vericode/issues"
+Homepage = "https://github.com/SAM389/veri_code"
+Issues = "https://github.com/SAM389/veri_code/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["vericode"]
@@ -67,6 +67,7 @@ addopts = "-ra -m 'not slow'"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["tests/fixtures", "benchmark/cases"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]

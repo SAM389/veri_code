@@ -1,0 +1,2 @@
+# pinned to a release that does not exist
+requests==99.0.0
