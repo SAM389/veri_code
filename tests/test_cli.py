@@ -64,3 +64,12 @@ def test_internal_error_exits_3(pypi: FakePyPI, tmp_path: Path) -> None:
         app, ["check", "--root", str(tmp_path), "--diff", str(tmp_path / "missing.patch")]
     )
     assert result.exit_code == 3
+
+
+def test_invalid_config_exits_3(pypi: FakePyPI, tmp_path: Path) -> None:
+    (tmp_path / ".vericode").mkdir()
+    (tmp_path / ".vericode" / "config.yaml").write_text("allow: not-a-list\n", encoding="utf-8")
+    result = runner.invoke(app, ["check", "--root", str(tmp_path)])
+    assert result.exit_code == 3
+    assert "invalid config" in result.output
+    assert pypi.calls == []

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import tempfile
@@ -24,7 +25,10 @@ from platformdirs import user_cache_dir
 from vericode import __version__
 
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
+PYPISTATS_URL = "https://pypistats.org/api/packages/{name}/recent"
 USER_AGENT = f"vericode/{__version__}"
+
+log = logging.getLogger(__name__)
 
 FOUND_TTL_S = 24 * 3600
 NOT_FOUND_TTL_S = 3600  # short: someone could register the name at any time
@@ -190,6 +194,24 @@ class Cache:
         self._entries[name] = entry
         self._dirty = True
 
+    # Download counts share the file under a "downloads:" prefix. Normalized project names
+    # never contain ":", so the keys cannot collide with package entries.
+
+    def get_downloads(self, name: str) -> int | None:
+        if self.path is None:
+            return None
+        entry = self._entries.get(f"downloads:{name}")
+        if not entry or self.now() - entry.get("fetched_at", 0) > FOUND_TTL_S:
+            return None
+        value = entry.get("last_month")
+        return value if isinstance(value, int) else None
+
+    def put_downloads(self, name: str, last_month: int) -> None:
+        if self.path is None:
+            return
+        self._entries[f"downloads:{name}"] = {"fetched_at": self.now(), "last_month": last_month}
+        self._dirty = True
+
     def save(self) -> None:
         if self.path is None or not self._dirty:
             return
@@ -285,3 +307,37 @@ class Registry:
                 if resp.status_code < 500:  # 429/403/...: retrying right away won't help
                     break
         return Unknown(key, error)
+
+    # ------------------------------------------------------------------ pypistats
+
+    async def downloads_last_month(self, name: str) -> int | None:
+        """Downloads in the last month from pypistats.org. A soft signal: any failure returns
+        None (never retried, never cached) and the caller simply skips the signal."""
+        assert self._client is not None, "use `async with Registry()`"
+        key = normalize(name)
+        cached = self.cache.get_downloads(key)
+        if cached is not None:
+            return cached
+        if not is_valid_name(key):
+            return None
+        async with self._sem:
+            try:
+                resp = await self._client.get(PYPISTATS_URL.format(name=key))
+            except httpx.HTTPError as e:
+                log.debug("pypistats lookup for %s failed: %s", key, e)
+                return None
+        if resp.status_code != 200:
+            log.debug("pypistats returned HTTP %s for %s", resp.status_code, key)
+            return None
+        try:
+            value = int(resp.json()["data"]["last_month"])
+        except (ValueError, TypeError, KeyError):
+            log.debug("pypistats returned an unreadable response for %s", key)
+            return None
+        self.cache.put_downloads(key, value)
+        return value
+
+    async def downloads_many(self, names: Iterable[str]) -> dict[str, int | None]:
+        keys = sorted({normalize(n) for n in names})
+        results = await asyncio.gather(*(self.downloads_last_month(k) for k in keys))
+        return dict(zip(keys, results, strict=True))

@@ -194,3 +194,20 @@ def test_discover_skips_venvs_and_hidden(tmp_path: Path) -> None:
         _write(tmp_path, rel, "")
     found = sorted(p.relative_to(tmp_path).as_posix() for p in discover([tmp_path]))
     assert found == ["app/main.py", "pyproject.toml", "requirements-dev.txt", "requirements.txt"]
+
+
+def test_from_import_names_and_paths(tmp_path: Path) -> None:
+    p = _write(
+        tmp_path,
+        "m.py",
+        """\
+        import google.cloud.storage
+        from google.cloud import storage, bigquery as bq
+        from os import *
+        """,
+    )
+    a, b, c = extract_imports(p, "m.py")
+    assert (a.names, a.paths) == ((), ("google.cloud.storage",))
+    assert b.names == ("storage", "bigquery")
+    assert b.paths == ("google.cloud.storage", "google.cloud.bigquery")
+    assert (c.names, c.paths) == ((), ("os",))

@@ -48,10 +48,19 @@ class ImportRef:
     file: str  # path relative to the check root, POSIX style
     line: int
     optional: bool = False  # inside try/except ImportError or `if TYPE_CHECKING:`
+    names: tuple[str, ...] = ()  # `from module import a, b` -> ("a", "b"); () for `import x`
 
     @property
     def top_level(self) -> str:
         return self.module.split(".", 1)[0]
+
+    @property
+    def paths(self) -> tuple[str, ...]:
+        """Dotted paths this import may refer to, e.g. `from google.cloud import storage`
+        -> ("google.cloud.storage",). Needed to resolve namespace packages."""
+        if not self.names:
+            return (self.module,)
+        return tuple(f"{self.module}.{n}" for n in self.names)
 
 
 @dataclass(frozen=True)
@@ -79,8 +88,8 @@ class _ImportVisitor(ast.NodeVisitor):
         self.refs: list[ImportRef] = []
         self._optional_depth = 0
 
-    def _add(self, module: str, line: int) -> None:
-        self.refs.append(ImportRef(module, self.file, line, self._optional_depth > 0))
+    def _add(self, module: str, line: int, names: tuple[str, ...] = ()) -> None:
+        self.refs.append(ImportRef(module, self.file, line, self._optional_depth > 0, names))
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
@@ -88,7 +97,8 @@ class _ImportVisitor(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         if node.level == 0 and node.module:  # skip relative imports
-            self._add(node.module, node.lineno)
+            names = tuple(a.name for a in node.names if a.name != "*")
+            self._add(node.module, node.lineno, names)
 
     def _visit_try(self, node: ast.Try | ast.TryStar) -> None:
         optional = any(_catches_import_error(h) for h in node.handlers)
@@ -142,7 +152,7 @@ def extract_imports(path: Path, rel: str) -> list[ImportRef]:
 
 
 def third_party(refs: Iterable[ImportRef]) -> list[ImportRef]:
-    """Drop stdlib imports. (Local-module and allowlist filtering arrive with mapping.)"""
+    """Drop stdlib imports. Local-module and allowlist filtering live in `mapping.Resolver`."""
     return [r for r in refs if r.top_level not in STDLIB]
 
 

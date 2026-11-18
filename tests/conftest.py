@@ -12,6 +12,7 @@ import respx
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PYPI_ROUTE = r"^https://pypi\.org/pypi/(?P<name>[^/]+)/json$"
+PYPISTATS_ROUTE = r"^https://pypistats\.org/api/packages/(?P<name>[^/]+)/recent$"
 
 
 def make_payload(
@@ -43,9 +44,21 @@ DEFAULT_PACKAGES = {
 
 
 class FakePyPI:
+    """Mocked PyPI JSON API plus pypistats. `downloads` maps name -> last-month downloads;
+    names missing from it get a 404 from pypistats (the signal is then skipped)."""
+
     def __init__(self, packages: dict[str, dict[str, Any]]) -> None:
         self.packages = dict(packages)
+        self.downloads: dict[str, int] = {}
         self.calls: list[str] = []
+        self.stats_calls: list[str] = []
+
+    def stats(self, request: httpx.Request, name: str) -> httpx.Response:
+        self.stats_calls.append(name)
+        if name in self.downloads:
+            data = {"last_day": 0, "last_week": 0, "last_month": self.downloads[name]}
+            return httpx.Response(200, json={"data": data, "package": name})
+        return httpx.Response(404, json={"message": "Not Found"})
 
     def __call__(self, request: httpx.Request, name: str) -> httpx.Response:
         self.calls.append(name)
@@ -60,11 +73,18 @@ def _isolated_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VERICODE_CACHE_DIR", str(tmp_path / "cache"))
 
 
+@pytest.fixture(autouse=True)
+def _no_installed_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Import mapping must not depend on what happens to be installed in the test env."""
+    monkeypatch.setattr("vericode.mapping.installed_distributions", dict)
+
+
 @pytest.fixture
 def pypi() -> Iterator[FakePyPI]:
     fake = FakePyPI(DEFAULT_PACKAGES)
     with respx.mock(assert_all_called=False) as router:
         router.get(url__regex=PYPI_ROUTE).mock(side_effect=fake)
+        router.get(url__regex=PYPISTATS_ROUTE).mock(side_effect=fake.stats)
         yield fake
 
 

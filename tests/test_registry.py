@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from tests.conftest import PYPI_ROUTE, FakePyPI, make_payload
+from tests.conftest import PYPI_ROUTE, PYPISTATS_ROUTE, FakePyPI, make_payload
 from vericode.registry import (
     FOUND_TTL_S,
     NOT_FOUND_TTL_S,
@@ -154,3 +154,44 @@ async def test_invalid_name_not_queried(pypi: FakePyPI, tmp_path: Path) -> None:
         res = await reg.lookup("-bad-")
     assert isinstance(res, Unknown)
     assert pypi.calls == []
+
+
+# --------------------------------------------------------------------------- pypistats
+
+
+async def test_downloads_found_and_cached(pypi: FakePyPI, tmp_path: Path) -> None:
+    pypi.downloads["requests"] = 123_456
+    clock = Clock()
+    async with _registry(tmp_path, clock) as reg:
+        assert await reg.downloads_last_month("Requests") == 123_456
+    async with _registry(tmp_path, clock) as reg:
+        assert await reg.downloads_many(["requests"]) == {"requests": 123_456}
+    assert pypi.stats_calls == ["requests"]
+    clock.t += FOUND_TTL_S + 1
+    async with _registry(tmp_path, clock) as reg:
+        await reg.downloads_last_month("requests")
+    assert pypi.stats_calls == ["requests", "requests"]
+
+
+async def test_downloads_cache_does_not_shadow_package_entry(
+    pypi: FakePyPI, tmp_path: Path
+) -> None:
+    pypi.downloads["requests"] = 5
+    async with _registry(tmp_path) as reg:
+        await reg.downloads_last_month("requests")
+        assert isinstance(await reg.lookup("requests"), PackageInfo)
+
+
+async def test_downloads_failures_are_none_and_not_cached(tmp_path: Path) -> None:
+    with respx.mock() as router:
+        route = router.get(url__regex=PYPISTATS_ROUTE)
+        route.side_effect = [
+            httpx.ConnectError("offline"),
+            httpx.Response(429),
+            httpx.Response(200, json={"unexpected": True}),
+            httpx.Response(200, json={"data": {"last_month": 42}}),
+        ]
+        async with _registry(tmp_path) as reg:
+            results = [await reg.downloads_last_month("pkg") for _ in range(4)]
+    assert results == [None, None, None, 42]
+    assert route.call_count == 4  # no retries, failures not cached

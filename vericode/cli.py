@@ -12,6 +12,7 @@ from typing import Annotated
 import typer
 
 from vericode import __version__
+from vericode.config import ConfigError
 from vericode.engine import run_check
 from vericode.verdict import Report, Severity, sort_findings
 
@@ -93,6 +94,9 @@ def check(
         if diff is not None:
             diff_text = sys.stdin.read() if diff == "-" else Path(diff).read_text(encoding="utf-8")
         report = asyncio.run(run_check(root, paths, diff_text, use_cache=not no_cache))
+    except ConfigError as e:  # never fall back to defaults: that would leak allowlisted names
+        typer.secho(f"vericode: invalid config: {e}", err=True, fg="red")
+        raise typer.Exit(EXIT_INTERNAL_ERROR) from e
     except Exception as e:  # fail open, but say so loudly
         typer.secho(f"vericode: internal error: {type(e).__name__}: {e}", err=True, fg="red")
         raise typer.Exit(EXIT_INTERNAL_ERROR) from e
