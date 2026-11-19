@@ -17,7 +17,12 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install
-        run: uv pip install -e ".[dev]"
+        # setup-uv's python-version doesn't create a venv, and `uv pip install` refuses to
+        # run without one (exit 2). Create it and put it on PATH for the later steps.
+        run: |
+          uv venv --python 3.11 .venv
+          uv pip install -e ".[dev]"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Lint
         run: ruff check . && ruff format --check .
       - name: Test
