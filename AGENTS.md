@@ -16,7 +16,7 @@ Plan docs: `plan_doc/VERICODE_PLAN.md` (why/what) and `plan_doc/vericode_phases.
 | P1 | Findings model, import/dep extraction, PyPI registry + cache, diff input, CLI | ✅ done |
 | P2 | `mapping.py` (import→package names, local-module filter, allowlist), `config.py`, `risk.py` (risk signals, near-miss), undeclared check | ✅ done |
 | P3 | `symbols.py` (sandbox venv + pyright) | ⏳ stub |
-| P4 | `mcp_server.py` (`verify_change` tool) | ⏳ stub: `main()` exits 3 |
+| P4 | `mcp_server.py` (`verify_change` + `verify_files` tools, stdio + streamable HTTP) | ✅ done |
 | P5 | `benchmark/run.py` + `benchmark/cases/` | ⏳ stub |
 | P6–P7 | README/GIF, CI matrix, release, launch | ⏳ |
 
@@ -30,6 +30,8 @@ pytest -m slow              # live tests against real PyPI (tests/test_live_pypi
 ruff check . && ruff format --check .   # lint; line length 100; tests/fixtures + benchmark/cases excluded
 vericode check --root tests/fixtures/fake_import            # manual smoke test -> BLOCK, exit 1
 vericode check --root . --diff change.patch | --diff -      # diff mode (file or stdin)
+vericode-mcp                                                # MCP over stdio (local agents)
+vericode-mcp --transport http --host 0.0.0.0 --port 8080  # MCP over HTTP at /mcp, health at /health
 ```
 Set `VERICODE_CACHE_DIR=<dir>` to keep the real PyPI cache out of experiments.
 
@@ -52,7 +54,7 @@ cli.check() ──► engine.run_check(root, paths, diff, registry=None, use_cac
                   6. diff mode: keep only findings on added lines (engine._on_added_line)
              ◄── Report (verdict.py) -> text (cli._print_text) or JSON (Report.to_json)
 ```
-Every entry point (CLI now, MCP in P4, benchmark in P5) must go through `engine.run_check`. Don't duplicate the pipeline.
+Every entry point (CLI, MCP server, benchmark in P5) must go through `engine.run_check`. Don't duplicate the pipeline.
 
 Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import or namespace guess), with "Did you mean X?" from `risk.near_miss(allow_variants=True)`. Exists and not in the top list → `risk.assess()`; if flagged: `near_miss` WARN when the name is ≤2 edits from a popular package, else `risk` WARN. A near-miss on a healthy package (httpie/httpx) is not reported. Real, required, resolved import missing from every dep file → `undeclared` WARN (skipped when the project has no dep files).
 
@@ -68,7 +70,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | `diff.py` | Unified diff → `{posix_path: {added new-file line numbers}}` | `parse_unified_diff(text)`: uses `@@` hunk counts to know where a hunk ends (content like `+++ x` is never mistaken for a header); skips deleted files (`+++ /dev/null`); strips `a/`/`b/`, quotes, tab timestamps |
 | `engine.py` | Orchestration + **all finding wording** (reason/fix_hint text lives here) | `run_check()`; `_collect()` → `_Collected(files, imports, deps, findings)`; `_declared()` → `_Declared(names, files)`; `_Use(ref, resolved)`; `_import_findings()` (NotFound → BLOCK, or WARN if `optional` or namespace guess; near-miss hint; Unknown → one `could_not_verify` per package; `_stmt()` renders the import); `_dep_findings()` (NotFound → BLOCK; pinned → `_version_finding`: missing → BLOCK, yanked → WARN, hint names `latest_version`); `_risk_findings()` (one `near_miss`/`risk` WARN per package; `_signal_text()` words the signals); `_undeclared_findings()`; `_locations()` / `_first()` (per-package findings go on the first use, preferring added lines in diff mode); `_could_not_verify()`, `_unparsable()`; `_on_added_line()` (diff filter; `could_not_verify` always kept); `_rel()` (paths relative to root, POSIX) |
 | `cli.py` | Typer app, thin wrapper over the engine | `app`; `check(paths, --diff FILE\|-, --root, --format text\|json, --fail-on block\|warn, --no-cache)`; exit codes `EXIT_OK=0` (below threshold), `EXIT_FAILED=1` (verdict ≥ `--fail-on`), `EXIT_INTERNAL_ERROR=3` (any exception, incl. `ConfigError` → "invalid config"; message on stderr); `_print_text()` (ASCII only: `->` and `\|`, safe on Windows cp1252 pipes) |
-| `mcp_server.py` | P4 stub. `main()` prints "not implemented" and exits 3 | entry point `vericode-mcp` |
+| `mcp_server.py` | MCP server (mcp SDK 2.x `MCPServer`, not v1 `FastMCP`). Thin wrapper over `engine.run_check`; tool results are `Report.to_json()`; config/internal errors → `ToolError` (an error result, never BLOCK) | `build_server(local=True)`: `verify_change(root, diff=None, paths=None)` (local only: reads the caller's disk) + `verify_files(files{relpath: content}, diff=None)` (writes to a temp dir; `_safe_rel` rejects absolute/`..`/drive paths; `_validate_files` caps `MAX_FILES`, `MAX_TOTAL_BYTES`); `local=False` (HTTP) exposes only `verify_files`; `GET /health`; `INSTRUCTIONS` (what the agent should do per verdict); `main(argv)`: `--transport stdio\|http`, `--host` (`$HOST`), `--port` (`$PORT`); HTTP is stateless + JSON responses (Cloud Run friendly); log level WARNING so package names aren't logged. Entry point `vericode-mcp` |
 | `config.py` | `.vericode/config.yaml` loader | `Config(allow: normalized frozenset, ignore_paths)` + `.is_allowed()`, `.is_ignored(rel)` (fnmatch or dir prefix); `load_config(root)`; `ConfigError` (bad YAML, wrong types, unknown keys) |
 | `mapping.py` | Import → PyPI package, and what must never be looked up | `Resolver(root, declared=, allow=, installed=None, imports=None)`: `.resolve(ref)` → `[Resolved(package, source, path)]` (`.guessed`), `.resolve_path()`, `.skip()` (stdlib, allowlist, `.is_local()`: root + `src/` modules, project's own name, any dir between the file and root); order: `installed` (`installed_distributions()`, skipped for namespaces, ambiguous → prefers declared) → `declared` (name, `py`/`py-`/`python-` prefix, `-python`/`-py` suffix) → `map` (`import_map()`, longest dotted prefix, case-sensitive keys) → `namespace` guess (`NAMESPACES`) → `import-name`. Bare namespace roots (`import google`) → nothing |
 | `risk.py` | Near-miss + risk signals (pure functions over registry facts) | `top_packages()` → `TopPackages(ordered, names)`; `near_miss(name, top, allow_variants=False)` → `NearMiss(candidate, distance)` (rapidfuzz Levenshtein ≤2; skips names <5 chars and names in the list; without `allow_variants` skips separator/`py` prefix variants); `assess(info, downloads, now)` → `RiskSignals` (`.new`, `.low_downloads`, `.single_release`, `has_links`, `.flagged`); constants `NEW_PACKAGE_DAYS`, `LOW_DOWNLOADS` |
@@ -89,6 +91,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | `test_mapping.py` | map cases, namespaces (mapped, guessed, bare root), installed/declared resolution, local-module shadowing, allowlist |
 | `test_risk.py` | top list, near-miss positives/negatives (short, popular, variants), `assess` signals and the flag rule |
 | `test_config.py` | defaults, allow/ignore_paths, invalid configs raise |
+| `test_mcp.py` | in-process `mcp.Client` against `build_server()`: tool lists (remote has no `verify_change`), BLOCK/PASS via both tools, diff mode, bad root, path-escape + size limits, invalid config → error, PyPI down → WARN |
 | `test_smoke.py` | import, `--help`, `--version` |
 | `test_live_pypi.py` | `@pytest.mark.slow`, real PyPI: fixtures, every `import_map.json` target exists, mapped imports PASS, typo gets a hint |
 | `fixtures/fake_import/` | `app/routes.py` imports nonexistent `fastapi_auth_helpers` → BLOCK |
@@ -124,7 +127,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | Refresh the top-packages snapshot | regenerate `data/top_packages.txt` from hugovk/top-pypi-packages (first 5,000, PEP 503 normalized) and update the date in its header | `test_risk.py` |
 | Undeclared rule / which dep files count | `engine._declared`, `_undeclared_findings` | `test_engine.py::test_*undeclared*` |
 | Symbol/API check (P3) | `symbols.py`; findings `Check.SYMBOL_EXISTS`; add `--no-symbols` flag in `cli.check` | new `test_symbols.py` (recorded pyright JSON) |
-| MCP tool (P4) | `mcp_server.py`, wrapping `engine.run_check` | new `test_mcp.py` |
+| MCP tools / transports | `mcp_server.py` (`build_server`, `main`); tool wording in the `description=` strings and `INSTRUCTIONS` | `test_mcp.py` |
 
 ## Invariants (don't break these)
 1. **Facts come from real tools.** `Finding.reason` must come from PyPI, pypistats, pyright or the AST. An LLM may only ever write `fix_hint`.
