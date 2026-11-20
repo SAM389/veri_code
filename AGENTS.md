@@ -18,6 +18,7 @@ Plan docs: `plan_doc/VERICODE_PLAN.md` (why/what) and `plan_doc/vericode_phases.
 | P3 | `symbols.py` (sandbox venv + pyright) | ⏳ stub |
 | P4 | `mcp_server.py` (`verify_change` + `verify_files` tools, stdio + streamable HTTP) | ✅ done |
 | P5 | `benchmark/run.py` + `benchmark/cases/` | ⏳ stub |
+| Web | `web/` playground (Pyodide, Firebase Hosting free plan): paste code or pick an example → verdict | ✅ done |
 | P6–P7 | README/GIF, CI matrix, release, launch | ⏳ |
 
 P2 decisions that differ from or go beyond the plan doc: declared deps are tried *before* the bundled map (the project's own declaration is the most specific evidence); a risk WARN needs one strong signal (first release < 30 days, < 1,000 downloads/month) or both weak ones (single release + no links); a 404 on a name guessed from a namespace import is WARN, not BLOCK; an invalid `.vericode/config.yaml` is an error (exit 3), never silently ignored, so allowlisted names can't leak.
@@ -32,6 +33,8 @@ vericode check --root tests/fixtures/fake_import            # manual smoke test 
 vericode check --root . --diff change.patch | --diff -      # diff mode (file or stdin)
 vericode-mcp                                                # MCP over stdio (local agents)
 vericode-mcp --transport http --host 0.0.0.0 --port 8080  # MCP over HTTP at /mcp, health at /health
+python web/build.py && python -m http.server 8765 --directory web/site   # web playground locally
+npx -y firebase-tools@14 deploy --only hosting --project <project-id>   # deploy (predeploy runs build.py)
 ```
 Set `VERICODE_CACHE_DIR=<dir>` to keep the real PyPI cache out of experiments.
 
@@ -54,7 +57,7 @@ cli.check() ──► engine.run_check(root, paths, diff, registry=None, use_cac
                   6. diff mode: keep only findings on added lines (engine._on_added_line)
              ◄── Report (verdict.py) -> text (cli._print_text) or JSON (Report.to_json)
 ```
-Every entry point (CLI, MCP server, benchmark in P5) must go through `engine.run_check`. Don't duplicate the pipeline.
+Every entry point (CLI, MCP server, web playground, benchmark in P5) must go through `engine.run_check`. Don't duplicate the pipeline.
 
 Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import or namespace guess), with "Did you mean X?" from `risk.near_miss(allow_variants=True)`. Exists and not in the top list → `risk.assess()`; if flagged: `near_miss` WARN when the name is ≤2 edits from a popular package, else `risk` WARN. A near-miss on a healthy package (httpie/httpx) is not reported. Real, required, resolved import missing from every dep file → `undeclared` WARN (skipped when the project has no dep files).
 
@@ -93,6 +96,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | `test_config.py` | defaults, allow/ignore_paths, invalid configs raise |
 | `test_mcp.py` | in-process `mcp.Client` against `build_server()`: tool lists (remote has no `verify_change`), BLOCK/PASS via both tools, diff mode, bad root, path-escape + size limits, invalid config → error, PyPI down → WARN |
 | `test_skill.py` | `.agents/skills/vericode-verify`: frontmatter follows agentskills.io (name = folder, lowercase-hyphen ≤64, description <1024, body <500 lines); the `verify_*` tools it names are exactly the MCP server's tools; `references/checks.md` covers every `Check` value |
+| `test_web.py` | `web/py` loaded by file path (never shadows real rapidfuzz): rapidfuzz stand-in matches real rapidfuzz; `vericode_web.check` BLOCK/PASS with a fake fetch, network failure → WARN, pypistats skipped without a request, unsafe paths / too many files rejected; `build.py` zip contents |
 | `test_smoke.py` | import, `--help`, `--version` |
 | `test_live_pypi.py` | `@pytest.mark.slow`, real PyPI: fixtures, every `import_map.json` target exists, mapped imports PASS, typo gets a hint |
 | `fixtures/fake_import/` | `app/routes.py` imports nonexistent `fastapi_auth_helpers` → BLOCK |
@@ -101,6 +105,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 
 ### Other
 - `.agents/skills/vericode-verify/`: Agent Skill (agentskills.io; auto-discovered by Antigravity, verified with `agy`). `SKILL.md` = when to run VeriCode, how (MCP `verify_change` → `verify_files` → CLI fallback), what to do per verdict (fix BLOCKs, max 3 rounds), never-rules (no `pip install` to probe, no allowlisting to silence). `references/checks.md` = per-check meaning and fix (loaded on demand).
+- `web/`: browser playground, runs the real engine in Pyodide (no server; Firebase Hosting free plan). `site/` = static files served as-is (`index.html`, `style.css` (dark only), `hero.js` = canvas pixel hands (robot = agent, human = you) drawn from `site/hands/{robot,human}.png` + `hands.json` (gray = brightness, alpha = coverage, fingertip positions), written into an ImageData buffer (fillRect per pixel is too slow), cached once settled, `?static` URL param = no animation; plus the looping terminal `SCRIPT` (keep it matching real CLI output); `app.js` with the `EXAMPLES` buttons, Pyodide version pinned in `index.html`); `py/vericode_web.py` = `check(files_json, fetch=None)` (writes files to Pyodide's in-memory disk, calls `engine.run_check` with `Registry(client=FetchClient())`; `FetchClient` wraps browser `fetch`, raises httpx errors so failures stay WARN, skips pypistats because it blocks CORS; `_safe_rel`, `MAX_FILES`, `MAX_TOTAL_BYTES`); `py/rapidfuzz/` = pure-Python stand-in for the `process.extract` + `Levenshtein.distance` that `risk.py` uses (Pyodide has no rapidfuzz); `build.py` zips `vericode/` (minus `cli.py`, `mcp_server.py`) + `py/` into `site/vericode.zip` (gitignored). `tools/make_hand_maps.py` regenerates `site/hands/` from `assets/hands-source.jpg` (Pexels photo by cottonbro studio, never served; needs the `web-tools` extra). `firebase.json` (repo root) serves `web/site` and runs `build.py` before deploy. Example names in `EXAMPLES` must be invented and checked unregistered. Local preview: `.claude/launch.json` config `web`.
 - `demo/`: live-demo kit. `setup_demo.ps1 [-Path]` (re)creates `%USERPROFILE%\vericode-demo` (FastAPI app with a TODO, git commit, copy of the skill; only deletes a folder holding its `.vericode-demo` marker; writes UTF-8 without BOM). `README.md` = MCP registration, prompt, expected BLOCK -> PASS, talking points, fallbacks. Kept outside the repo tree on purpose: a nested git repo would give `git diff` paths relative to this repo.
 - `pyproject.toml`: hatchling; deps; extras `[symbols]` (pyright) and `[dev]`; scripts `vericode`, `vericode-mcp`; pytest (`asyncio_mode=auto`, `slow` marker, `-m 'not slow'`); ruff (`E,F,W,I,B,UP,SIM,RUF`, line 100).
 - `.github/workflows/ci.yml`: ubuntu, py3.11, uv install, ruff + pytest (matrix arrives in P6).
@@ -129,6 +134,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | Risk thresholds / near-miss rules | `risk.py` (`NEW_PACKAGE_DAYS`, `LOW_DOWNLOADS`, `RiskSignals.flagged`, `near_miss`, `_is_variant`) | `test_risk.py`, `test_engine.py` |
 | Refresh the top-packages snapshot | regenerate `data/top_packages.txt` from hugovk/top-pypi-packages (first 5,000, PEP 503 normalized) and update the date in its header | `test_risk.py` |
 | Undeclared rule / which dep files count | `engine._declared`, `_undeclared_findings` | `test_engine.py::test_*undeclared*` |
+| Web playground (examples, layout, Pyodide glue) | `web/site/app.js` (`EXAMPLES`), `hero.js` (hands, terminal script), `index.html`, `style.css`; `web/py/vericode_web.py`; `web/build.py` | `test_web.py`, then check in a browser |
 | Agent Skill wording / workflow | `.agents/skills/vericode-verify/SKILL.md`, `references/checks.md` (keep tool names and check ids in sync with the code) | `test_skill.py` |
 | Symbol/API check (P3) | `symbols.py`; findings `Check.SYMBOL_EXISTS`; add `--no-symbols` flag in `cli.check` | new `test_symbols.py` (recorded pyright JSON) |
 | MCP tools / transports | `mcp_server.py` (`build_server`, `main`); tool wording in the `description=` strings and `INSTRUCTIONS` | `test_mcp.py` |

@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "public": "web/site",
+    "predeploy": ["python web/build.py"],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
+}

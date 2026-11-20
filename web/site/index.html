@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VeriCode Playground</title>
+  <meta name="description" content="VeriCode catches the packages and versions your AI coding agent made up, before anything gets installed. Try it in your browser.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='%234ade80' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="./" aria-label="VeriCode home">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="7"/><path d="M9 16.5l4.5 4.5L23 11"/></svg>
+        </span>
+        VeriCode
+      </a>
+      <nav class="nav-links" aria-label="Sections">
+        <a href="#how">How it works</a>
+        <a href="#try">Playground</a>
+        <a href="https://github.com/SAM389/veri_code" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <a class="pill pill-light" href="#try">Try it live</a>
+    </div>
+  </header>
+
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">AI writes the code. VeriCode checks the facts.</h1>
+      <p>Catches the packages and versions your coding agent made up, before anything gets installed.</p>
+      <a class="pill pill-light" href="#try">Try it in your browser <span aria-hidden="true">&#8599;</span></a>
+    </div>
+
+    <div class="hero-stage" id="hero-stage">
+      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <div class="term" id="hero-term" role="img"
+        aria-label="Terminal: vericode check blocks a made-up package, the agent removes it, and the next check passes.">
+        <div class="term-bar">
+          <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
+          <span class="term-title">~/my-app</span>
+        </div>
+        <div class="term-body" aria-hidden="true"></div>
+      </div>
+      <div class="stage-labels" aria-hidden="true">
+        <span>Your AI agent</span>
+        <span>You</span>
+      </div>
+    </div>
+
+  </section>
+
+  <p class="works-with">
+    <span class="works-label">Works with any MCP agent</span>
+    <span>Claude Code</span><span>Gemini CLI</span><span>Antigravity</span><span>Cursor</span>
+  </p>
+
+  <main class="wrap">
+    <section class="how" id="how" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">How it works</h2>
+      <div class="how-grid">
+        <div>
+          <span class="how-num">01</span>
+          <h3>Real facts, not guesses</h3>
+          <p>Every finding comes from PyPI or the Python parser. No LLM decides whether a package exists.</p>
+        </div>
+        <div>
+          <span class="how-num">02</span>
+          <h3>Knows the tricky names</h3>
+          <p><code>cv2</code> is <code>opencv-python</code>, <code>PIL</code> is <code>Pillow</code>.
+            Standard library, local modules and optional imports are never flagged.</p>
+        </div>
+        <div>
+          <span class="how-num">03</span>
+          <h3>Built for agents</h3>
+          <p>The same engine runs as an MCP server and an Agent Skill, so the agent checks its own
+            change and fixes every BLOCK before it says "done".</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="try" id="try" aria-labelledby="try-title">
+      <h2 id="try-title" class="section-title">Try it yourself</h2>
+      <p class="section-sub">Pick an example, or paste code your agent wrote, then press Check.</p>
+
+      <div class="examples" aria-label="Examples">
+        <span class="examples-label">Examples</span>
+        <div class="example-buttons" id="examples"></div>
+      </div>
+
+      <div class="grid">
+        <section class="panel editor" aria-label="Code">
+          <div class="tabs" role="tablist" id="tabs">
+            <button role="tab" class="tab" data-file="main.py" aria-selected="true">main.py</button>
+            <button role="tab" class="tab" data-file="requirements.txt" aria-selected="false">requirements.txt</button>
+          </div>
+          <div class="code">
+            <pre class="gutter" id="gutter" aria-hidden="true">1</pre>
+            <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-label="File contents"></textarea>
+          </div>
+          <div class="actions">
+            <button class="run" id="run" disabled>Loading Python...</button>
+            <span class="hint" id="status">Starting the Python runtime in your browser (first load takes a few seconds).</span>
+          </div>
+        </section>
+
+        <section class="panel results" aria-label="Results" aria-live="polite">
+          <div id="results" class="empty">
+            <p class="empty-title">No check yet</p>
+            <p>Pick an example above or edit the code, then press <strong>Check</strong>
+              (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>).</p>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    Runs entirely in your browser with Pyodide. Your code is not uploaded anywhere; only package
+    names are sent to PyPI. Download-count signals are off in the browser version.
+    Hand shapes traced from a photo by
+    <a href="https://www.pexels.com/photo/6153343/" target="_blank" rel="noopener">cottonbro studio</a> (Pexels).
+  </footer>
+
+  <script src="hero.js"></script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

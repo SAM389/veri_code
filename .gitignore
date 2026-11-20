@@ -26,3 +26,11 @@ Thumbs.db
 .vscode/
 .idea/
 plan_doc/
+
+# Web build output
+web/site/vericode.zip
+.firebase/
+firebase-debug.log
+
+# Design references (third-party, local only)
+design_idea/

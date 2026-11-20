@@ -35,6 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 symbols = ["pyright>=1.1.400"]
+web-tools = ["pillow>=10.0", "numpy>=1.26"]  # web/tools/make_hand_maps.py only
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
