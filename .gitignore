@@ -34,3 +34,7 @@ firebase-debug.log
 
 # Design references (third-party, local only)
 design_idea/
+
+# Submission deck (uses the organisers' template images)
+deck/
+video/

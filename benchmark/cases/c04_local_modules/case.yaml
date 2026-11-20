@@ -1,0 +1,4 @@
+kind: clean
+category: local_module
+note: Local modules named like PyPI packages (utils, config, app) must never be looked up.
+expected_verdict: PASS

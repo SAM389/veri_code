@@ -1,0 +1,4 @@
+kind: clean
+category: ml_stack
+note: Common ML libraries.
+expected_verdict: PASS

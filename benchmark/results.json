@@ -1,0 +1,363 @@
+{
+  "date": "2026-11-20",
+  "version": "0.1.0.dev0",
+  "python": "3.11.0",
+  "summary": {
+    "caught": 10,
+    "planted": 10,
+    "false_positives": 0,
+    "clean": 10,
+    "false_blocks": 0,
+    "by_category": {
+      "fake_package": {
+        "caught": 4,
+        "total": 4
+      },
+      "typo_package": {
+        "caught": 3,
+        "total": 3
+      },
+      "fake_version": {
+        "caught": 3,
+        "total": 3
+      }
+    },
+    "latency_s": {
+      "cold_p50": 0.457,
+      "cold_p95": 0.885,
+      "warm_p50": 0.015,
+      "warm_p95": 0.02
+    }
+  },
+  "cases": [
+    {
+      "id": "c01_mapped_imports",
+      "kind": "clean",
+      "category": "import_name_mismatch",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 1.338,
+      "warm_s": 0.015,
+      "findings": []
+    },
+    {
+      "id": "c02_namespace_packages",
+      "kind": "clean",
+      "category": "namespace_package",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.387,
+      "warm_s": 0.015,
+      "findings": []
+    },
+    {
+      "id": "c03_optional_imports",
+      "kind": "clean",
+      "category": "optional_import",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.611,
+      "warm_s": 0.015,
+      "findings": []
+    },
+    {
+      "id": "c04_local_modules",
+      "kind": "clean",
+      "category": "local_module",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.486,
+      "warm_s": 0.022,
+      "findings": []
+    },
+    {
+      "id": "c05_stdlib_only",
+      "kind": "clean",
+      "category": "stdlib",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.012,
+      "warm_s": 0.012,
+      "findings": []
+    },
+    {
+      "id": "c06_pyproject_deps",
+      "kind": "clean",
+      "category": "pyproject",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.429,
+      "warm_s": 0.016,
+      "findings": []
+    },
+    {
+      "id": "c07_real_pins",
+      "kind": "clean",
+      "category": "pinned_versions",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.46,
+      "warm_s": 0.015,
+      "findings": []
+    },
+    {
+      "id": "c08_tricky_names",
+      "kind": "clean",
+      "category": "import_name_mismatch",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.885,
+      "warm_s": 0.018,
+      "findings": []
+    },
+    {
+      "id": "c09_flask_stack",
+      "kind": "clean",
+      "category": "web_stack",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.416,
+      "warm_s": 0.016,
+      "findings": []
+    },
+    {
+      "id": "c10_ml_stack",
+      "kind": "clean",
+      "category": "ml_stack",
+      "expected": "PASS",
+      "verdict": "PASS",
+      "ok": true,
+      "cold_s": 0.423,
+      "warm_s": 0.02,
+      "findings": []
+    },
+    {
+      "id": "p01_fake_import",
+      "kind": "planted",
+      "category": "fake_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.455,
+      "warm_s": 0.015,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "main.py",
+          "line": 2,
+          "package": "fastapi-auth-helpers",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Remove `from fastapi_auth_helpers import require_api_key`: no package named 'fastapi-auth-helpers' exists on PyPI. Use a real package or write the code without it."
+        }
+      ]
+    },
+    {
+      "id": "p02_fake_submodule",
+      "kind": "planted",
+      "category": "fake_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.472,
+      "warm_s": 0.012,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "chat.py",
+          "line": 1,
+          "package": "langchain-memory-utils",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Remove `from langchain_memory_utils.cache import ConversationCache`: no package named 'langchain-memory-utils' exists on PyPI. Use a real package or write the code without it."
+        }
+      ]
+    },
+    {
+      "id": "p03_fake_dep_requirements",
+      "kind": "planted",
+      "category": "fake_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.468,
+      "warm_s": 0.015,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "requirements.txt",
+          "line": 2,
+          "package": "httpx-retry-helper",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Remove 'httpx-retry-helper' from requirements.txt: no package with this name exists on PyPI."
+        }
+      ]
+    },
+    {
+      "id": "p04_fake_dep_pyproject",
+      "kind": "planted",
+      "category": "fake_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.478,
+      "warm_s": 0.014,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "pyproject.toml",
+          "line": 4,
+          "package": "flask-jwt-magic",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Remove 'flask-jwt-magic' from pyproject.toml: no package with this name exists on PyPI."
+        }
+      ]
+    },
+    {
+      "id": "p05_typo_import",
+      "kind": "planted",
+      "category": "typo_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.417,
+      "warm_s": 0.014,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "main.py",
+          "line": 1,
+          "package": "reqeusts",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Did you mean 'requests'? No package named 'reqeusts' exists on PyPI; fix `import reqeusts`."
+        }
+      ]
+    },
+    {
+      "id": "p06_typo_alias",
+      "kind": "planted",
+      "category": "typo_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.473,
+      "warm_s": 0.012,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "report.py",
+          "line": 1,
+          "package": "pandsa",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Did you mean 'pandas'? No package named 'pandsa' exists on PyPI; fix `import pandsa`."
+        }
+      ]
+    },
+    {
+      "id": "p07_typo_dep",
+      "kind": "planted",
+      "category": "typo_package",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.466,
+      "warm_s": 0.015,
+      "findings": [
+        {
+          "check": "package_exists",
+          "severity": "BLOCK",
+          "file": "requirements.txt",
+          "line": 1,
+          "package": "numpyy",
+          "reason": "Not found on PyPI (HTTP 404)",
+          "fix_hint": "Did you mean 'numpy'? Remove 'numpyy' from requirements.txt: no package with this name exists on PyPI."
+        },
+        {
+          "check": "undeclared",
+          "severity": "WARN",
+          "file": "stats.py",
+          "line": 1,
+          "package": "numpy",
+          "reason": "Imported but not declared in requirements.txt",
+          "fix_hint": "Add 'numpy' to requirements.txt so the project installs it."
+        }
+      ]
+    },
+    {
+      "id": "p08_fake_version_requirements",
+      "kind": "planted",
+      "category": "fake_version",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.161,
+      "warm_s": 0.02,
+      "findings": [
+        {
+          "check": "version_exists",
+          "severity": "BLOCK",
+          "file": "requirements.txt",
+          "line": 1,
+          "package": "requests",
+          "reason": "Version 99.0.0 not found in PyPI releases of 'requests'",
+          "fix_hint": "Pin a version of 'requests' that exists. Latest release is 2.34.2."
+        }
+      ]
+    },
+    {
+      "id": "p09_fake_version_pyproject",
+      "kind": "planted",
+      "category": "fake_version",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.183,
+      "warm_s": 0.015,
+      "findings": [
+        {
+          "check": "version_exists",
+          "severity": "BLOCK",
+          "file": "pyproject.toml",
+          "line": 4,
+          "package": "django",
+          "reason": "Version 9.1.0 not found in PyPI releases of 'Django'",
+          "fix_hint": "Pin a version of 'django' that exists. Latest release is 6.1.3."
+        }
+      ]
+    },
+    {
+      "id": "p10_fake_version_poetry",
+      "kind": "planted",
+      "category": "fake_version",
+      "expected": "BLOCK",
+      "verdict": "BLOCK",
+      "ok": true,
+      "cold_s": 0.22,
+      "warm_s": 0.015,
+      "findings": [
+        {
+          "check": "version_exists",
+          "severity": "BLOCK",
+          "file": "pyproject.toml",
+          "line": 7,
+          "package": "fastapi",
+          "reason": "Version 0.999.0 not found in PyPI releases of 'fastapi'",
+          "fix_hint": "Pin a version of 'fastapi' that exists. Latest release is 0.165.0."
+        }
+      ]
+    }
+  ]
+}

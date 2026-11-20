@@ -1,0 +1,4 @@
+kind: clean
+category: web_stack
+note: Flask + extensions + werkzeug/jinja2 that come with Flask.
+expected_verdict: PASS

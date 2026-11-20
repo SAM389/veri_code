@@ -1,0 +1,6 @@
+kind: planted
+category: typo_package
+note: Typo of a popular package in requirements.txt (the import itself is right).
+expected_verdict: BLOCK
+expected_findings:
+  - {check: package_exists, package: numpyy}

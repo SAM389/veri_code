@@ -1,0 +1,6 @@
+kind: planted
+category: fake_package
+note: Import of a package that does not exist.
+expected_verdict: BLOCK
+expected_findings:
+  - {check: package_exists, package: fastapi-auth-helpers}

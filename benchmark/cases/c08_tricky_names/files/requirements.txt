@@ -1,0 +1,4 @@
+attrs
+PyJWT
+python-dateutil
+python-dotenv

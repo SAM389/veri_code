@@ -1,0 +1,4 @@
+kind: clean
+category: import_name_mismatch
+note: Import names that differ from the PyPI name (cv2, PIL, yaml, bs4, sklearn).
+expected_verdict: PASS

@@ -1,0 +1,4 @@
+kind: clean
+category: optional_import
+note: try/except ImportError and TYPE_CHECKING imports are optional, not required.
+expected_verdict: PASS

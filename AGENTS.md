@@ -17,7 +17,7 @@ Plan docs: `plan_doc/VERICODE_PLAN.md` (why/what) and `plan_doc/vericode_phases.
 | P2 | `mapping.py` (import→package names, local-module filter, allowlist), `config.py`, `risk.py` (risk signals, near-miss), undeclared check | ✅ done |
 | P3 | `symbols.py` (sandbox venv + pyright) | ⏳ stub |
 | P4 | `mcp_server.py` (`verify_change` + `verify_files` tools, stdio + streamable HTTP) | ✅ done |
-| P5 | `benchmark/run.py` + `benchmark/cases/` | ⏳ stub |
+| P5 | `benchmark/run.py` + 20 cases in `benchmark/cases/` (10 planted, 10 clean); latest: 10/10 caught, 0/10 false positives (`benchmark/RESULTS.md`) | ✅ mini version (P3 categories wait for P3) |
 | Web | `web/` playground (Pyodide, Firebase Hosting free plan): paste code or pick an example → verdict | ✅ done |
 | P6–P7 | README/GIF, CI matrix, release, launch | ⏳ |
 
@@ -57,7 +57,7 @@ cli.check() ──► engine.run_check(root, paths, diff, registry=None, use_cac
                   6. diff mode: keep only findings on added lines (engine._on_added_line)
              ◄── Report (verdict.py) -> text (cli._print_text) or JSON (Report.to_json)
 ```
-Every entry point (CLI, MCP server, web playground, benchmark in P5) must go through `engine.run_check`. Don't duplicate the pipeline.
+Every entry point (CLI, MCP server, web playground, benchmark) must go through `engine.run_check`. Don't duplicate the pipeline.
 
 Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import or namespace guess), with "Did you mean X?" from `risk.near_miss(allow_variants=True)`. Exists and not in the top list → `risk.assess()`; if flagged: `near_miss` WARN when the name is ≤2 edits from a popular package, else `risk` WARN. A near-miss on a healthy package (httpie/httpx) is not reported. Real, required, resolved import missing from every dep file → `undeclared` WARN (skipped when the project has no dep files).
 
@@ -97,6 +97,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 | `test_mcp.py` | in-process `mcp.Client` against `build_server()`: tool lists (remote has no `verify_change`), BLOCK/PASS via both tools, diff mode, bad root, path-escape + size limits, invalid config → error, PyPI down → WARN |
 | `test_skill.py` | `.agents/skills/vericode-verify`: frontmatter follows agentskills.io (name = folder, lowercase-hyphen ≤64, description <1024, body <500 lines); the `verify_*` tools it names are exactly the MCP server's tools; `references/checks.md` covers every `Check` value |
 | `test_web.py` | `web/py` loaded by file path (never shadows real rapidfuzz): rapidfuzz stand-in matches real rapidfuzz; `vericode_web.check` BLOCK/PASS with a fake fetch, network failure → WARN, pypistats skipped without a request, unsafe paths / too many files rejected; `build.py` zip contents |
+| `test_benchmark.py` | `benchmark/run.py` loaded by path: every case loads and is well formed, planted needs its expected finding, clean with any finding = false positive, `summarize` counts |
 | `test_smoke.py` | import, `--help`, `--version` |
 | `test_live_pypi.py` | `@pytest.mark.slow`, real PyPI: fixtures, every `import_map.json` target exists, mapped imports PASS, typo gets a hint |
 | `fixtures/fake_import/` | `app/routes.py` imports nonexistent `fastapi_auth_helpers` → BLOCK |
@@ -109,7 +110,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 - `demo/`: live-demo kit. `setup_demo.ps1 [-Path]` (re)creates `%USERPROFILE%\vericode-demo` (FastAPI app with a TODO, git commit, copy of the skill; only deletes a folder holding its `.vericode-demo` marker; writes UTF-8 without BOM). `README.md` = MCP registration, prompt, expected BLOCK -> PASS, talking points, fallbacks. Kept outside the repo tree on purpose: a nested git repo would give `git diff` paths relative to this repo.
 - `pyproject.toml`: hatchling; deps; extras `[symbols]` (pyright) and `[dev]`; scripts `vericode`, `vericode-mcp`; pytest (`asyncio_mode=auto`, `slow` marker, `-m 'not slow'`); ruff (`E,F,W,I,B,UP,SIM,RUF`, line 100).
 - `.github/workflows/ci.yml`: ubuntu, py3.11, uv install, ruff + pytest (matrix arrives in P6).
-- `benchmark/run.py` (stub), `benchmark/cases/` (empty, P5).
+- `benchmark/`: `run.py` (`load_cases`, `run_case` = cold + warm `engine.run_check` with a temp cache per case, `Result.ok` (planted: verdict + every expected finding; clean: no WARN/BLOCK at all), `summarize`, writes `results.json` + `RESULTS.md`; live PyPI, run manually) and `cases/<id>/{case.yaml, files/}` (`p*` planted: fake package / typo / fake version; `c*` clean: mapped names, namespaces, optional, local modules, stdlib, pyproject, pins, web + ML stacks). Planted names must be invented and checked unregistered when added.
 - `LICENSE`: Commons Clause + modified MIT with no right to sell. Don't change it without the owner asking.
 
 ## Where to change X

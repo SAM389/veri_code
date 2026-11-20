@@ -1,0 +1,4 @@
+kind: clean
+category: pyproject
+note: Dependencies declared in pyproject.toml.
+expected_verdict: PASS

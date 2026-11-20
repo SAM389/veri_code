@@ -1,0 +1,2 @@
+httpx
+httpx-retry-helper==1.2.0

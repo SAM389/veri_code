@@ -1,0 +1,6 @@
+kind: planted
+category: fake_version
+note: Pin to a version that was never released (pyproject.toml).
+expected_verdict: BLOCK
+expected_findings:
+  - {check: version_exists, package: django}

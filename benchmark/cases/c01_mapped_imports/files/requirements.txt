@@ -1,0 +1,5 @@
+opencv-python
+PyYAML
+beautifulsoup4
+Pillow
+scikit-learn

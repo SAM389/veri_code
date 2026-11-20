@@ -1,0 +1,4 @@
+kind: clean
+category: import_name_mismatch
+note: "dateutil, jwt, dotenv and attr: more import names that differ from the PyPI name."
+expected_verdict: PASS

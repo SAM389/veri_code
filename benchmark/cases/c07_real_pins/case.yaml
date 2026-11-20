@@ -1,0 +1,4 @@
+kind: clean
+category: pinned_versions
+note: Pins to versions that really exist.
+expected_verdict: PASS

@@ -1,0 +1,4 @@
+kind: clean
+category: namespace_package
+note: google.cloud / google.auth namespace imports.
+expected_verdict: PASS

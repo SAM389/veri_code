@@ -1,0 +1,6 @@
+kind: planted
+category: typo_package
+note: Typo of a popular package imported with an alias.
+expected_verdict: BLOCK
+expected_findings:
+  - {check: package_exists, package: pandsa}
