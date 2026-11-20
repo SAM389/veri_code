@@ -16,7 +16,7 @@ installed, and tells the agent exactly how to fix them.
 AI coding agents sometimes write code that depends on things that don't exist:
 
 ```python
-from fastapi_auth_helpers import require_api_key   # no such package
+from fastapi_auth_helpers import require_api_key  # no such package
 ```
 ```text
 requests==99.0.0                                    # no such version
