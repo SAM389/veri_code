@@ -101,6 +101,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 
 ### Other
 - `.agents/skills/vericode-verify/`: Agent Skill (agentskills.io; auto-discovered by Antigravity, verified with `agy`). `SKILL.md` = when to run VeriCode, how (MCP `verify_change` → `verify_files` → CLI fallback), what to do per verdict (fix BLOCKs, max 3 rounds), never-rules (no `pip install` to probe, no allowlisting to silence). `references/checks.md` = per-check meaning and fix (loaded on demand).
+- `demo/`: live-demo kit. `setup_demo.ps1 [-Path]` (re)creates `%USERPROFILE%\vericode-demo` (FastAPI app with a TODO, git commit, copy of the skill; only deletes a folder holding its `.vericode-demo` marker; writes UTF-8 without BOM). `README.md` = MCP registration, prompt, expected BLOCK -> PASS, talking points, fallbacks. Kept outside the repo tree on purpose: a nested git repo would give `git diff` paths relative to this repo.
 - `pyproject.toml`: hatchling; deps; extras `[symbols]` (pyright) and `[dev]`; scripts `vericode`, `vericode-mcp`; pytest (`asyncio_mode=auto`, `slow` marker, `-m 'not slow'`); ruff (`E,F,W,I,B,UP,SIM,RUF`, line 100).
 - `.github/workflows/ci.yml`: ubuntu, py3.11, uv install, ruff + pytest (matrix arrives in P6).
 - `benchmark/run.py` (stub), `benchmark/cases/` (empty, P5).
