@@ -3,7 +3,7 @@
 > Shared instructions for every coding agent (Claude Code, Gemini CLI, Antigravity, ...).
 > `CLAUDE.md` and `GEMINI.md` only import this file, so edit this file, not them.
 
-VeriCode checks code written by AI coding agents for **made-up packages, versions and APIs**, and returns structured findings (PASS / WARN / BLOCK + fix hints) so the agent can repair its own change. Python 3.11+, published on PyPI as **`vericode-ai`**. The import package and CLI are both `vericode`. Source-available under MIT + Commons Clause (no selling without the owner's permission).
+VeriCode checks code written by AI coding agents for **made-up packages, versions and APIs**, and returns structured findings (PASS / WARN / BLOCK + fix hints) so the agent can repair its own change. Python 3.11+, distribution name **`vericode-ai`** (not on PyPI yet; install from GitHub). The import package and CLI are both `vericode`. Source-available under MIT + Commons Clause (no selling without the owner's permission).
 
 **Read this file first. It should be enough to know which file and function to edit. Open only the files you're changing.**
 
@@ -111,6 +111,7 @@ Checks per package: NotFound → `package_exists` BLOCK (WARN if optional import
 - `pyproject.toml`: hatchling; deps; extras `[symbols]` (pyright) and `[dev]`; scripts `vericode`, `vericode-mcp`; pytest (`asyncio_mode=auto`, `slow` marker, `-m 'not slow'`); ruff (`E,F,W,I,B,UP,SIM,RUF`, line 100).
 - `.github/workflows/ci.yml`: ubuntu, py3.11, uv install, ruff + pytest (matrix arrives in P6).
 - `benchmark/`: `run.py` (`load_cases`, `run_case` = cold + warm `engine.run_check` with a temp cache per case, `Result.ok` (planted: verdict + every expected finding; clean: no WARN/BLOCK at all), `summarize`, writes `results.json` + `RESULTS.md`; live PyPI, run manually) and `cases/<id>/{case.yaml, files/}` (`p*` planted: fake package / typo / fake version; `c*` clean: mapped names, namespaces, optional, local modules, stdlib, pyproject, pins, web + ML stacks). Planted names must be invented and checked unregistered when added.
+- `README.md` + `docs/img/` (`hero.png`, `playground.png`: screenshots of the live site): user-facing docs. Keep claims in sync with what is built (no symbol check until P3).
 - `LICENSE`: Commons Clause + modified MIT with no right to sell. Don't change it without the owner asking.
 
 ## Where to change X
